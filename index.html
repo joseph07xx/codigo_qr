@@ -1,59 +1,212 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Nuestra Historia</title>
-    <style>
-        body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; justify-content: center; }
-        .card { border: 1px solid #ddd; padding: 15px; border-radius: 15px; width: 320px; text-align: center; background: #fdf7fc; }
-        .media-container { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px; margin-bottom: 10px; }
-        img { max-width: 100%; height: auto; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .btn { background: #6b3fa0; color: white; padding: 10px 20px; text-decoration: none; border-radius: 20px; display: inline-block; margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio - Generador Full HD</title>
+<!-- Librería QR moderna con soporte nativo UTF-8 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<style>
+:root{
+  --bg:#090d18;--card:#121a2d;--text:#f7f8ff;--muted:#9ba8c4;
+  --accent:#6d5dfc;--accent2:#00cfff;--border:rgba(255,255,255,.10)
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;padding:24px;display:grid;place-items:center;
+  font-family:Arial,Helvetica,sans-serif;color:var(--text);
+  background:
+    radial-gradient(circle at 15% 15%,rgba(109,93,252,.24),transparent 30%),
+    radial-gradient(circle at 85% 85%,rgba(0,207,255,.15),transparent 30%),var(--bg)
+}
+.app{width:min(960px,100%);display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.card{
+  background:rgba(18,26,45,.9);border:1px solid var(--border);border-radius:24px;
+  padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)
+}
+.badge{
+  display:inline-block;padding:7px 11px;border-radius:999px;
+  background:rgba(109,93,252,.13);border:1px solid rgba(109,93,252,.28);
+  color:#d9d5ff;font-size:12px;font-weight:bold;margin-bottom:14px
+}
+h1{margin:0 0 8px;font-size:32px}
+.subtitle{color:var(--muted);line-height:1.5;margin:0 0 24px}
+label{display:block;font-weight:bold;margin-bottom:9px}
+textarea{
+  width:100%;min-height:155px;resize:vertical;padding:15px;border-radius:16px;
+  border:1px solid var(--border);outline:none;background:rgba(255,255,255,.05);
+  color:var(--text);font:inherit;line-height:1.45
+}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(109,93,252,.12)}
+.buttons{display:flex;gap:10px;margin-top:14px}
+button{
+  border:0;border-radius:13px;padding:13px 18px;font-size:15px;font-weight:bold;
+  cursor:pointer;transition:.15s
+}
+button:hover{transform:translateY(-1px)}
+.primary{flex:1;color:white;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.secondary{color:white;background:rgba(255,255,255,.08)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.hint{margin-top:10px;color:var(--muted);font-size:12px}
+.preview{
+  min-height:390px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px
+}
+#qr-container{
+  display:none;background:white;padding:16px;border-radius:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,.25)
+}
+#qr-canvas{display:block}
+.empty{text-align:center;color:var(--muted);padding:20px}
+.status{font-size:13px;color:#b9c4dd;text-align:center;min-height:18px}
+@media(max-width:760px){
+  .app{grid-template-columns:1fr}
+  .preview{min-height:320px}
+}
+</style>
 </head>
 <body>
 
-    <div id="galeria-prueba"></div>
+<main class="app">
 
-    <script>
-        // Cambiamos a objetos más claros
-        const contenido = [
-            {
-                titulo: "Nuestro Video",
-                tipo: "video",
-                url: "https://youtube.com/shorts/6K2pEAAkTXM"
+<section class="card">
+  <div class="badge">⚡ QR STUDIO · FULL HD</div>
+  <h1>Generador de códigos QR</h1>
+  <p class="subtitle">
+    Escribe un texto, enlace, número o cualquier información y conviértela
+    en un código QR descargable.
+  </p>
 
-            },
-            {
-                titulo: "Nuestro Recuerdo",
-                tipo: "imagen",
-                url: "https://lh3.googleusercontent.com/d/1E78G7zVFpYkWX27AfGA9S6WXWVJASeEV"
-            }
-        ];
+  <label for="contenido">Contenido</label>
+  <textarea id="contenido" placeholder="Ejemplo: El dilema de las redes sociales - Netflix"></textarea>
 
-        const galeria = document.getElementById('galeria-prueba');
+  <div class="buttons">
+    <button class="primary" id="generar">Generar QR</button>
+    <button class="secondary" id="limpiar">Limpiar</button>
+  </div>
 
-        contenido.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'card';
+  <div class="hint">
+    La descarga será una imagen PNG de <strong>1920 × 1080 píxeles</strong>.
+  </div>
+</section>
 
-            const media = item.tipo === 'video'
-                ? `<iframe src="${item.url}" allowfullscreen></iframe>`
-                : `<img src="${item.url}" alt="${item.titulo}">`;
+<section class="card preview">
+  <div id="empty" class="empty">
+    <div style="font-size:42px;margin-bottom:8px">▦</div>
+    Tu código QR aparecerá aquí
+  </div>
 
-            // Para la imagen ponemos botón de descarga directa, para el video ponemos link a YouTube
-            const boton = item.tipo === 'imagen'
-                ? `<a href="${item.url}" download class="btn">Descargar Foto</a>`
-                : `<a href="https://youtube.com/shorts/6K2pEAAkTXM" target="_blank" class="btn">Ver en YouTube</a>`;
+  <div id="qr-container">
+    <canvas id="qr-canvas"></canvas>
+  </div>
+  <div id="status" class="status"></div>
 
-            card.innerHTML = `
-                <h3>${item.titulo}</h3>
-                <div class="media-container">${media}</div>
-                ${boton}
-            `;
-            galeria.appendChild(card);
-        });
-    </script>
+  <button class="primary" id="descargar" disabled>
+    ⬇ Descargar PNG Full HD
+  </button>
+</section>
+
+</main>
+
+<script>
+const contenido = document.getElementById("contenido");
+const generar = document.getElementById("generar");
+const limpiar = document.getElementById("limpiar");
+const descargar = document.getElementById("descargar");
+const qrContainer = document.getElementById("qr-container");
+const qrCanvas = document.getElementById("qr-canvas");
+const empty = document.getElementById("empty");
+const status = document.getElementById("status");
+
+let qrInstance = null;
+let ultimoTexto = "";
+
+function generarQR(){
+  const texto = contenido.value.trim();
+
+  if(!texto){
+    alert("Escribe algo para generar el código QR.");
+    contenido.focus();
+    return;
+  }
+
+  qrContainer.style.display = "block";
+  empty.style.display = "none";
+  status.textContent = "Generando...";
+
+  qrInstance = new QRious({
+    element: qrCanvas,
+    value: texto,
+    size: 320,
+    level: 'M'
+  });
+
+  ultimoTexto = texto;
+  descargar.disabled = false;
+  status.textContent = "QR listo. Puedes descargarlo en Full HD.";
+}
+
+function descargarFullHD(){
+  if(!ultimoTexto) return;
+
+  const canvasHD = document.createElement("canvas");
+  canvasHD.width = 1920;
+  canvasHD.height = 1080;
+
+  const ctx = canvasHD.getContext("2d");
+
+  // Fondo blanco
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0,0,1920,1080);
+
+  // Generamos un QR de alta resolución directamente con QRious para que no pierda nitidez
+  const qrTemp = document.createElement("canvas");
+  new QRious({
+    element: qrTemp,
+    value: ultimoTexto,
+    size: 760,
+    level: 'M'
+  });
+
+  const x = (1920 - 760) / 2;
+  const y = (1080 - 760) / 2;
+
+  ctx.drawImage(qrTemp, x, y);
+
+  canvasHD.toBlob(function(blob){
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+
+    enlace.href = url;
+    enlace.download = "codigo-qr-full-hd.png";
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    URL.revokeObjectURL(url);
+  },"image/png");
+}
+
+function limpiarTodo(){
+  contenido.value = "";
+  qrContainer.style.display = "none";
+  empty.style.display = "block";
+  descargar.disabled = true;
+  status.textContent = "";
+  ultimoTexto = "";
+  contenido.focus();
+}
+
+generar.addEventListener("click",generarQR);
+descargar.addEventListener("click",descargarFullHD);
+limpiar.addEventListener("click",limpiarTodo);
+
+contenido.addEventListener("keydown",function(e){
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+    generarQR();
+  }
+});
+</script>
+
 </body>
 </html>
